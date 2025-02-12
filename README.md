@@ -13,8 +13,9 @@ A Chrome extension that uses OpenAI's API to generate concise summaries of GitHu
 ## Installation
 
 1. Clone this repository:
+
    ```bash
-   git clone https://github.com/yourusername/github-pr-ai-summarizer.git
+   git clone https://github.com/kupe517/github-pr-ar-summarizer.git
    ```
 
 2. Open Chrome and navigate to `chrome://extensions/`
