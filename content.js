@@ -2,6 +2,12 @@
 
 // Function to create and add the "Summarize PR Changes" button.
 function addSummarizeButton() {
+  
+  // Check if button already exists to avoid duplicates
+  if (document.querySelector('[aria-label="AI Summary"]')) {
+    return;
+  }
+  
   const button = document.createElement("button");
 
   // Set button type to "button" to avoid default submit behavior.
@@ -45,6 +51,10 @@ function addSummarizeButton() {
   const actionBar = document.querySelector(".ActionBar-item-container");
   if (actionBar) {
     actionBar.prepend(button);
+  } else {
+    // Remove the button if we couldn't add it to the action bar
+    button.remove();
+    return;
   }
 
   button.addEventListener("click", () => {
@@ -112,5 +122,65 @@ function showSummary(summary) {
   prBody.value = "## Summary of changes\n\n" + summary;
 }
 
-// Add the button when the script loads.
-addSummarizeButton();
+// Function to check if we're on a PR page
+function isPRPage() {
+  // Check if we're on a pull request page
+  return window.location.pathname.includes('/pull/') || 
+         document.querySelector('.js-pull-request-tab') !== null ||
+         document.querySelector('.new-pr-form') !== null;
+}
+
+// Function to initialize the observer
+function initMutationObserver() {
+  // Create a MutationObserver to watch for changes to the DOM
+  const observer = new MutationObserver((mutations) => {
+    // Check if we're on a PR page
+    if (isPRPage()) {
+      // Look for the action bar
+      const actionBar = document.querySelector(".ActionBar-item-container");
+      // If action bar exists and our button doesn't, add it
+      if (actionBar && !document.querySelector('[aria-label="AI Summary"]')) {
+        addSummarizeButton();
+      }
+    }
+  });
+
+  // Start observing the document with the configured parameters
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true 
+  });
+}
+
+// Initial setup
+function initialize() {
+  
+  // Add button if we're already on a PR page
+  if (isPRPage()) {
+    addSummarizeButton();
+  }
+  
+  // Set up observer for future navigation
+  initMutationObserver();
+  
+  // Also listen for URL changes
+  let lastUrl = location.href;
+  new MutationObserver(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+      lastUrl = url;
+      if (isPRPage()) {
+        setTimeout(() => {
+          addSummarizeButton();
+        }, 1000); // Small delay to ensure DOM is updated
+      }
+    }
+  }).observe(document, {subtree: true, childList: true});
+}
+
+// Initialize the extension when the DOM is fully loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize);
+} else {
+  initialize();
+}
