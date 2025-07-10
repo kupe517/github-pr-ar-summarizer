@@ -1,44 +1,48 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>GitHub PR AI Summarizer Options</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-      }
-      label {
-        display: block;
-        margin-bottom: 8px;
-      }
-      input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 12px;
-      }
-      button {
-        padding: 8px 16px;
-      }
-      #status {
-        margin-top: 12px;
-        color: green;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Extension Options</h1>
-    <label for="apiKey">OpenAI API Key:</label>
-    <input type="text" id="apiKey" placeholder="Enter your OpenAI API key" />
-    
-    <label for="model">Model:</label>
-    <input type="text" id="model" placeholder="Enter the model (default: gpt-3.5-turbo)" />
-    
-    <label for="maxTokens">Max Tokens:</label>
-    <input type="text" id="maxTokens" placeholder="Enter max tokens (default: 150)" />
-    
-    <button id="save">Save</button>
-    <p id="status"></p>
-    <script src="options.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>GitHub PR AI Summarizer Options</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      padding: 8px 16px;
+    }
+
+    #status {
+      margin-top: 12px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Extension Options</h1>
+  <label for="apiKey">OpenAI API Key:</label>
+  <input type="text" id="apiKey" placeholder="Enter your OpenAI API key" />
+  <label for="githubToken">GitHub Personal Access Token:</label>
+  <input type="password" id="githubToken" placeholder="Enter your GitHub personal access token" />
+  <label for="model">Model:</label>
+  <input type="text" id="model" placeholder="Enter the model (default: gpt-3.5-turbo)" />
+  <label for="maxTokens">Max Tokens:</label>
+  <input type="text" id="maxTokens" placeholder="Enter max tokens (default: 150)" />
+  <button id="save">Save</button>
+  <p id="status"></p>
+  <script src="options.js"></script>
+</body>
 </html>
