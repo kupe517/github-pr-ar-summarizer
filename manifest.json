@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Summarize GitHub Pull Request changes using the OpenAI API.",
   "permissions": ["storage", "scripting"],
-  "host_permissions": ["https://api.openai.com/*"],
+  "host_permissions": ["https://api.openai.com/*", "https://api.github.com/*"],
   "background": {
     "service_worker": "background.js"
   },

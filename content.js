@@ -1,13 +1,41 @@
 // content.js
 
+// Function to extract PR metadata from the URL
+function extractPRMetadata() {
+  const path = window.location.pathname;
+
+  // Check for existing PR
+  const prMatch = path.match(/\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/);
+  if (prMatch) {
+    return {
+      owner: prMatch[1],
+      repo: prMatch[2],
+      pullNumber: prMatch[3],
+      isNewPR: false,
+    };
+  }
+
+  // Check for PR creation page
+  const compareMatch = path.match(/\/([^\/]+)\/([^\/]+)\/compare\/(.*)/);
+  if (compareMatch) {
+    return {
+      owner: compareMatch[1],
+      repo: compareMatch[2],
+      compareBranch: compareMatch[3],
+      isNewPR: true,
+    };
+  }
+
+  return null;
+}
+
 // Function to create and add the "Summarize PR Changes" button.
 function addSummarizeButton() {
-  
   // Check if button already exists to avoid duplicates
   if (document.querySelector('[aria-label="AI Summary"]')) {
     return;
   }
-  
+
   const button = document.createElement("button");
 
   // Set button type to "button" to avoid default submit behavior.
@@ -33,73 +61,76 @@ function addSummarizeButton() {
     height: "32px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   });
 
   // Add hover effects
   button.addEventListener("mouseenter", () => {
-    button.style.backgroundColor =
-      "var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg))";
+    button.style.backgroundColor = "var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg))";
   });
 
   button.addEventListener("mouseleave", () => {
     button.style.backgroundColor = "transparent";
   });
 
-  document.body.appendChild(button);
-
-  const actionBar = document.querySelector(".ActionBar-item-container");
-  if (actionBar) {
-    actionBar.prepend(button);
+  // For new PR page, add button next to the description field
+  const newPrDescriptionContainer = document.querySelector(".comment-form-head");
+  if (newPrDescriptionContainer) {
+    const buttonContainer = document.createElement("div");
+    buttonContainer.style.position = "absolute";
+    buttonContainer.style.right = "10px";
+    buttonContainer.style.top = "10px";
+    buttonContainer.appendChild(button);
+    newPrDescriptionContainer.style.position = "relative";
+    newPrDescriptionContainer.appendChild(buttonContainer);
   } else {
-    // Remove the button if we couldn't add it to the action bar
-    button.remove();
-    return;
+    // For existing PRs, add to the action bar
+    const actionBar = document.querySelector(".ActionBar-item-container");
+    if (actionBar) {
+      actionBar.prepend(button);
+    } else {
+      // Remove the button if we couldn't add it anywhere
+      button.remove();
+      return;
+    }
   }
 
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     // Change the button to a loading icon
     button.innerHTML = loadingIcon;
 
-    // Extract diff text from the page.
-    let diffText = "";
-    // GitHub PR file changes are usually rendered inside elements with the class "file".
-    const diffContainers = document.querySelectorAll(".file");
-
-    if (diffContainers.length === 0) {
-      alert(
-        "No diff found on this page. Please navigate to the 'Files changed' tab."
-      );
+    const prMetadata = extractPRMetadata();
+    if (!prMetadata) {
+      alert("Could not extract repository information from the URL.");
+      button.innerHTML = aiIcon;
       return;
     }
 
-    const prBody = document.querySelector("#pull_request_body");
-    if (prBody) {
-      diffText += `
-          PR description: ${prBody.value}\n\n
-          `;
-    }
+    if (prMetadata.isNewPR) {
+      // For new PRs, we need to get the diff from the compare view
+      let diffText = "";
+      const diffContainers = document.querySelectorAll(".file");
 
-    diffContainers.forEach((file) => {
-      // Skip package-lock.json files
-      const fileName = file
-        .querySelector(".file-header")
-        ?.getAttribute("data-path");
-      if (fileName === "package-lock.json") return;
+      if (diffContainers.length === 0) {
+        alert("No changes found to summarize.");
+        button.innerHTML = aiIcon;
+        return;
+      }
 
-      const diffContent = file.querySelector(".diff-table")
-        ? file.querySelector(".diff-table").innerText
-        : "";
-      diffText += `
-          File name: ${fileName}\n\n
-          ${diffContent}\n\n
-          `;
-    });
+      diffContainers.forEach((file) => {
+        // Skip package-lock.json files
+        const fileName = file.querySelector(".file-header")?.getAttribute("data-path");
+        if (fileName === "package-lock.json") return;
 
-    // Send the diff text to the background script for summarization.
-    chrome.runtime.sendMessage(
-      { action: "summarizeDiff", diff: diffText },
-      (response) => {
+        const diffContent = file.querySelector(".diff-table") ? file.querySelector(".diff-table").innerText : "";
+        diffText += `
+            File name: ${fileName}\n\n
+            ${diffContent}\n\n
+            `;
+      });
+
+      // Send the diff text to the background script for summarization
+      chrome.runtime.sendMessage({ action: "summarizeDiff", diff: diffText }, (response) => {
         if (response && response.summary) {
           showSummary(response.summary);
         } else if (response && response.error) {
@@ -107,27 +138,56 @@ function addSummarizeButton() {
         }
         // Restore the SVG after processing
         button.innerHTML = aiIcon;
-      }
-    );
+      });
+    } else {
+      // For existing PRs, use the GitHub API
+      chrome.runtime.sendMessage(
+        {
+          action: "summarizeDiffFromPR",
+          ...prMetadata,
+        },
+        (response) => {
+          if (response && response.summary) {
+            showSummary(response.summary);
+          } else if (response && response.error) {
+            alert("Error summarizing: " + response.error);
+          }
+          // Restore the SVG after processing
+          button.innerHTML = aiIcon;
+        }
+      );
+    }
   });
 }
 
 // Function to display the summary in the PR description
 function showSummary(summary) {
-  const prBody = document.querySelector("#pull_request_body");
+  // Try to find the PR description textarea
+  let prBody = document.querySelector("#pull_request_body");
+
+  // If not found, try the new PR description field
   if (!prBody) {
-    console.warn("PR body element not found, showing modal instead");
+    prBody = document.querySelector("#pull_request_body, .js-comment-field");
+  }
+
+  if (!prBody) {
+    console.warn("PR body element not found");
+    alert("Could not find the PR description field to update.");
     return;
   }
+
+  // Update the description field
   prBody.value = "## Summary of changes\n\n" + summary;
+
+  // Trigger input event to ensure GitHub's UI updates
+  const event = new Event("input", { bubbles: true });
+  prBody.dispatchEvent(event);
 }
 
-// Function to check if we're on a PR page
+// Function to check if we're on a PR page or compare page
 function isPRPage() {
-  // Check if we're on a pull request page
-  return window.location.pathname.includes('/pull/') || 
-         document.querySelector('.js-pull-request-tab') !== null ||
-         document.querySelector('.new-pr-form') !== null;
+  // Check if we're on a pull request page or compare page
+  return window.location.pathname.includes("/pull/") || window.location.pathname.includes("/compare/") || document.querySelector(".js-pull-request-tab") !== null || document.querySelector(".new-pr-form") !== null;
 }
 
 // Function to initialize the observer
@@ -146,23 +206,22 @@ function initMutationObserver() {
   });
 
   // Start observing the document with the configured parameters
-  observer.observe(document.body, { 
-    childList: true, 
-    subtree: true 
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
   });
 }
 
 // Initial setup
 function initialize() {
-  
   // Add button if we're already on a PR page
   if (isPRPage()) {
     addSummarizeButton();
   }
-  
+
   // Set up observer for future navigation
   initMutationObserver();
-  
+
   // Also listen for URL changes
   let lastUrl = location.href;
   new MutationObserver(() => {
@@ -175,12 +234,12 @@ function initialize() {
         }, 1000); // Small delay to ensure DOM is updated
       }
     }
-  }).observe(document, {subtree: true, childList: true});
+  }).observe(document, { subtree: true, childList: true });
 }
 
 // Initialize the extension when the DOM is fully loaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initialize);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initialize);
 } else {
   initialize();
 }
