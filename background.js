@@ -1,12 +1,10 @@
 // background.js
 
-const generatePrompt = (diff) => {
-  return `You are a code review assistant. I will provide you with a Git diff of a pull request.  
+const INSTRUCTIONS = `You are a code review assistant. I will provide you with a Git diff of a pull request.  
 Your task is to:
 
 1. **Provide an Overview** – Summarize what the pull request is doing in one or two sentences.  
-2. **List Key Changes** – Bullet point the main changes, grouping them logically by file or feature.  
-3. **Note Breaking Changes or Risk Areas** – Highlight anything that could break functionality or requires special attention.  
+2. **List Key Changes** – Bullet point the main changes, grouping them logically by file or feature.   
 
 The diff will look like a standard \`git diff\`.  
 Do **not** simply restate every line of the diff. Instead, focus on what functionality was changed and why.  
@@ -19,16 +17,7 @@ Do **not** simply restate every line of the diff. Instead, focus on what functio
 ## Key Changes
 - <file> – description of major change
 - <file> – description of major change
-
-## Potential Risks
-- description of any potential risk
-\`\`\`
-
-Here is the diff to analyze:
-\`\`\`
-${diff}
 \`\`\``;
-};
 
 const BASE_MODEL = "gpt-5-nano";
 const BASE_MAX_TOKENS = 700;
@@ -36,7 +25,6 @@ const BASE_MAX_TOKENS = 700;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "summarizeDiff") {
     const diff = message.diff;
-    const prompt = generatePrompt(diff);
 
     // Retrieve the stored settings from chrome.storage
     chrome.storage.sync.get(
@@ -51,10 +39,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // Use user-specified values or defaults
-        const model = data.model || BASE_MODEL;
-        const maxTokens = parseInt(data.max_tokens, 10) || BASE_MAX_TOKENS;
-
         fetch("https://api.openai.com/v1/responses", {
           method: "POST",
           headers: {
@@ -63,7 +47,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           },
           body: JSON.stringify({
             model: BASE_MODEL,
-            input: prompt,
+            instructions: INSTRUCTIONS,
+            input: [
+              {
+                role: "user",
+                content: `Here is the git diff to analyze:\n\n${diff}`,
+              },
+            ],
           }),
         })
           .then((response) => response.json())
@@ -72,8 +62,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const summary =
               data.output &&
               data.output[1] &&
-              data.output[1].content &&
-              data.output[1].content.text;
+              data.output[1].content[0] &&
+              data.output[1].content[0].text;
             sendResponse({ summary });
           })
           .catch((error) => {
@@ -130,12 +120,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return response.text();
           })
           .then((diff) => {
-            const prompt = generatePrompt(diff);
-
-            // Use user-specified values or defaults
-            const model = data.model || BASE_MODEL;
-            const maxTokens = parseInt(data.max_tokens, 10) || BASE_MAX_TOKENS;
-
             return fetch("https://api.openai.com/v1/responses", {
               method: "POST",
               headers: {
@@ -144,7 +128,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               },
               body: JSON.stringify({
                 model: BASE_MODEL,
-                input: prompt,
+                instructions: INSTRUCTIONS,
+                input: [
+                  {
+                    role: "user",
+                    content: `Here is the git diff to analyze:\n\n${diff}`,
+                  },
+                ],
               }),
             });
           })
@@ -154,8 +144,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const summary =
               data.output &&
               data.output[1] &&
-              data.output[1].content &&
-              data.output[1].content.text;
+              data.output[1].content[0] &&
+              data.output[1].content[0].text;
             sendResponse({ summary });
           })
           .catch((error) => {
