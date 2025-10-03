@@ -58,7 +58,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
           .then((response) => response.json())
           .then((data) => {
-            console.log("data", data);
+            if (data.error) {
+              sendResponse({ error: data.error.message });
+              return;
+            }
             const summary =
               data.output &&
               data.output[1] &&
