@@ -28,9 +28,11 @@ A Chrome extension that uses OpenAI's API to generate concise summaries of GitHu
 
 1. Click the extension's options icon in Chrome's extension menu
 2. Enter your OpenAI API key
-3. (Optional) Adjust the model and max tokens settings
-   - Default model: `gpt-3.5-turbo`
-   - Default max tokens: 250
+3. Select an OpenAI model and optionally adjust the maximum output tokens.
+   - `gpt-5.6-sol` — highest capability
+   - `gpt-5.6-terra` — balances capability and cost
+   - `gpt-5.6-luna` — cost-efficient default
+   - Default maximum output tokens: 700
 
 ## Usage
 
