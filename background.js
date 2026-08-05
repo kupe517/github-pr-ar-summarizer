@@ -1,23 +1,24 @@
 // background.js
 
-const INSTRUCTIONS = `You are a code review assistant. I will provide you with a Git diff of a pull request.  
-Your task is to:
+const INSTRUCTIONS = `Write a high-level, product-manager-friendly summary of this pull request using only the supplied changed files and diff.
 
-1. **Provide an Overview** – Summarize what the pull request is doing in one or two sentences.  
-2. **List Key Changes** – Bullet point the main changes, grouping them logically by file or feature.   
+Start with a 1–2 sentence plain-English overview of the outcome.
 
-The diff will look like a standard \`git diff\`.  
-Do **not** simply restate every line of the diff. Instead, focus on what functionality was changed and why.  
+Then group related changes into meaningful sections based on their purpose, not the order of the diff. For example: “Local developer experience,” “Production deployment,” “Documentation,” or “Testing.”
 
-**Output format example:**
-\`\`\`
-## Overview
-<high-level summary>
+Within each section, list every substantive created, modified, or deleted file in this format:
 
-## Key Changes
-- <file> – description of major change
-- <file> – description of major change
-\`\`\``;
+- \`path/to/file\` — 1–3 sentences explaining what changed and why it matters. Focus on the developer, operational, or product impact rather than implementation details.
+
+Rules:
+- Clearly identify new, modified, and deleted files where relevant.
+- Use understandable language; briefly explain unavoidable technical terms.
+- Do not describe changes line-by-line or repeat the diff.
+- Do not speculate beyond the evidence in the diff.
+- Omit incidental generated files, lockfiles, and formatting-only changes unless they materially affect the result.
+- Keep related files together and avoid a separate section for a single trivial file.
+- End with a short “Overall result” paragraph explaining what is safer, easier, faster, or more reliable after this PR.
+`;
 
 const BASE_MODEL = "gpt-5.6-luna";
 const BASE_MAX_TOKENS = 700;
@@ -31,7 +32,7 @@ function extractResponseText(response) {
     .flatMap((item) => (Array.isArray(item.content) ? item.content : []))
     .filter(
       (content) =>
-        content.type === "output_text" && typeof content.text === "string"
+        content.type === "output_text" && typeof content.text === "string",
     )
     .map((content) => content.text)
     .join("\n")
@@ -59,7 +60,8 @@ function sendOpenAIResponse(data, sendResponse) {
   const summary = extractResponseText(data);
   if (!summary) {
     sendResponse({
-      error: "OpenAI returned no summary. Check the extension service worker console for details.",
+      error:
+        "OpenAI returned no summary. Check the extension service worker console for details.",
     });
     return;
   }
@@ -109,7 +111,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.error("Error calling OpenAI API:", error);
             sendResponse({ error: error.toString() });
           });
-      }
+      },
     );
 
     // Return true to indicate that sendResponse will be called asynchronously.
@@ -150,7 +152,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               Authorization: `token ${githubToken}`,
               Accept: "application/vnd.github.v3.diff",
             },
-          }
+          },
         )
           .then((response) => {
             if (!response.ok) {
@@ -185,7 +187,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.error("Error:", error);
             sendResponse({ error: error.toString() });
           });
-      }
+      },
     );
 
     // Return true to indicate that sendResponse will be called asynchronously.
