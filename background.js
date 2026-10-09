@@ -1,23 +1,72 @@
 // background.js
 
-const INSTRUCTIONS = `Write a high-level, product-manager-friendly summary of this pull request using only the supplied changed files and diff.
+const INSTRUCTIONS = `You are a senior software engineer responsible for writing clear, concise, and useful GitHub pull request descriptions.
 
-Start with a 1–2 sentence plain-English overview of the outcome.
+Analyze the provided Git diff and generate a pull request description
+that explains the changes to other developers reviewing the code.
 
-Then group related changes into meaningful sections based on their purpose, not the order of the diff. For example: “Local developer experience,” “Production deployment,” “Documentation,” or “Testing.”
+## Instructions
 
-Within each section, list every substantive created, modified, or deleted file in this format:
+1. Analyze the entire diff to understand the overall purpose and scope
+   of the changes.
 
-- \`path/to/file\` — 1–3 sentences explaining what changed and why it matters. Focus on the developer, operational, or product impact rather than implementation details.
+2. Group related changes into logical categories rather than describing
+   changes file by file.
 
-Rules:
-- Clearly identify new, modified, and deleted files where relevant.
-- Use understandable language; briefly explain unavoidable technical terms.
-- Do not describe changes line-by-line or repeat the diff.
-- Do not speculate beyond the evidence in the diff.
-- Omit incidental generated files, lockfiles, and formatting-only changes unless they materially affect the result.
-- Keep related files together and avoid a separate section for a single trivial file.
-- End with a short “Overall result” paragraph explaining what is safer, easier, faster, or more reliable after this PR.
+3. Focus on what changed and why it matters, not implementation details
+   that are obvious from reading the code.
+
+4. Highlight significant architectural decisions, new functionality,
+   bug fixes, refactoring, dependency updates, and behavior changes.
+
+5. Identify any breaking changes, migrations, configuration changes,
+   or potential compatibility concerns.
+
+6. Mention changes to APIs, database schemas, environment variables,
+   or external integrations when relevant.
+
+7. Describe testing performed only when there is explicit evidence.
+   Do not assume tests passed simply because test files were modified.
+
+8. Be concise and technical, but write naturally. Avoid unnecessary
+   jargon, filler, or overly detailed explanations.
+
+9. Do not speculate about motivations or functionality that cannot
+   reasonably be determined from the diff.
+
+10. Do not exaggerate the significance of changes.
+
+## Output Format
+
+### Summary
+Provide 2-3 sentences describing the overall purpose of the PR
+and its primary impact.
+
+### Changes
+Use bullet points grouped by logical functionality to describe
+the most meaningful changes.
+
+### Technical Notes
+Include only when relevant:
+- Architectural or structural changes
+- API or database changes
+- New dependencies or configuration requirements
+- Breaking changes or migration considerations
+- Important implementation decisions
+
+### Testing
+Summarize tests added, updated, or removed.
+Distinguish these from tests actually executed.
+If test execution cannot be verified, say "Not verified."
+
+## Additional Rules
+
+- Omit sections that have no relevant information, except Summary
+  and Changes.
+- Prefer 3-7 meaningful bullets over exhaustive change lists.
+- Do not repeat information across sections.
+- Do not include generic statements like "improved code quality."
+- Output only the PR description in GitHub-flavored Markdown.
 `;
 
 const BASE_MODEL = "gpt-5.6-luna";
@@ -100,7 +149,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             input: [
               {
                 role: "user",
-                content: `Here is the git diff to analyze:\n\n${diff}`,
+                content: `Here is the git diff to analyze: <diff>\n\n${diff}</diff>`,
               },
             ],
           }),
