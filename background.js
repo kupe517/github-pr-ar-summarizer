@@ -1,50 +1,53 @@
 // background.js
+importScripts("models.js");
 
 const INSTRUCTIONS = `You are a senior software engineer responsible for writing clear, concise, and useful GitHub pull request descriptions.
 
-Analyze the provided Git diff and generate a pull request description
-that explains the changes to other developers reviewing the code.
+Analyze the provided Git diff and generate a pull request description that explains the changes to other developers reviewing the code.
 
 ## Instructions
 
-1. Analyze the entire diff to understand the overall purpose and scope
-   of the changes.
+1. Analyze the entire diff to understand the overall purpose and scope of the changes.
 
-2. Group related changes into logical categories rather than describing
-   changes file by file.
+2. Group related changes into logical categories rather than describing changes file by file.
 
-3. Focus on what changed and why it matters, not implementation details
-   that are obvious from reading the code.
+3. Focus on what changed and why it matters, not implementation details that are obvious from reading the code.
 
-4. Highlight significant architectural decisions, new functionality,
-   bug fixes, refactoring, dependency updates, and behavior changes.
+4. Highlight significant architectural decisions, new functionality, bug fixes, refactoring, dependency updates, and behavior changes.
 
-5. Identify any breaking changes, migrations, configuration changes,
-   or potential compatibility concerns.
+5. Identify any breaking changes, migrations, configuration changes, or potential compatibility concerns.
 
-6. Mention changes to APIs, database schemas, environment variables,
-   or external integrations when relevant.
+6. Mention changes to APIs, database schemas, environment variables, or external integrations when relevant.
 
-7. Describe testing performed only when there is explicit evidence.
-   Do not assume tests passed simply because test files were modified.
+7. Describe testing performed only when there is explicit evidence. Do not assume tests passed simply because test files were modified.
 
-8. Be concise and technical, but write naturally. Avoid unnecessary
-   jargon, filler, or overly detailed explanations.
+8. Do not speculate about motivations or functionality that cannot reasonably be determined from the diff.
 
-9. Do not speculate about motivations or functionality that cannot
-   reasonably be determined from the diff.
+9. Do not exaggerate the significance of changes.
 
-10. Do not exaggerate the significance of changes.
+## Writing Style
+
+Follow ASD-STE100-inspired technical writing principles. Prioritize clarity, accuracy, and readability over strict compliance.
+
+- Use clear, concise, and direct technical language.
+- Prefer active voice and short, declarative sentences.
+- Express one main idea per sentence and one action per instruction.
+- Use simple, consistent terminology. Preserve exact technical identifiers and established domain terms.
+- Avoid unnecessary jargon, filler, vague language, and complex sentence structures.
+- Use precise verbs that describe observable changes, such as "adds," "removes," "updates," "replaces," or "fixes."
+- Describe verified behavior accurately. Do not invent implementation details, motivations, or outcomes.
+- Favor clarity and precision over brevity when they conflict.
+- Write naturally. Do not sacrifice readability to enforce rigid sentence structures.
+
+These principles are inspired by ASD-STE100 and do not imply formal compliance.
 
 ## Output Format
 
 ### Summary
-Provide 2-3 sentences describing the overall purpose of the PR
-and its primary impact.
+Provide 2-3 sentences describing the overall purpose of the PR and its primary impact.
 
 ### Changes
-Use bullet points grouped by logical functionality to describe
-the most meaningful changes.
+Use bullet points grouped by logical functionality to describe the most meaningful changes.
 
 ### Technical Notes
 Include only when relevant:
@@ -61,15 +64,15 @@ If test execution cannot be verified, say "Not verified."
 
 ## Additional Rules
 
-- Omit sections that have no relevant information, except Summary
-  and Changes.
+- Omit sections that have no relevant information, except Summary and Changes.
 - Prefer 3-7 meaningful bullets over exhaustive change lists.
 - Do not repeat information across sections.
 - Do not include generic statements like "improved code quality."
+- Use Markdown headings and bullets to make the description easy to scan.
+- Keep each bullet focused on one meaningful change or closely related group of changes.
 - Output only the PR description in GitHub-flavored Markdown.
 `;
 
-const BASE_MODEL = "gpt-5.6-luna";
 const BASE_MAX_TOKENS = 700;
 
 function extractResponseText(response) {
@@ -127,6 +130,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       ["openai_api_key", "model", "max_tokens"],
       (data) => {
         const openaiApiKey = data.openai_api_key;
+        const model = resolveModel(data.model);
         if (!openaiApiKey) {
           sendResponse({
             error:
@@ -142,9 +146,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             Authorization: `Bearer ${openaiApiKey}`,
           },
           body: JSON.stringify({
-            model: data.model || BASE_MODEL,
+            model,
             max_output_tokens: Number(data.max_tokens) || BASE_MAX_TOKENS,
-            reasoning: { effort: "none" },
+            reasoning: { effort: ["gpt-6-astra", "gpt-6.1-sol"].includes(model) ? "low" : "none" },
             instructions: INSTRUCTIONS,
             input: [
               {
@@ -176,6 +180,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       (data) => {
         const githubToken = data.github_token;
         const openaiApiKey = data.openai_api_key;
+        const model = resolveModel(data.model);
 
         if (!githubToken) {
           sendResponse({
@@ -217,9 +222,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 Authorization: `Bearer ${openaiApiKey}`,
               },
               body: JSON.stringify({
-                model: data.model || BASE_MODEL,
+                model,
                 max_output_tokens: Number(data.max_tokens) || BASE_MAX_TOKENS,
-                reasoning: { effort: "none" },
+                reasoning: { effort: ["gpt-6-astra", "gpt-6.1-sol"].includes(model) ? "low" : "none" },
                 instructions: INSTRUCTIONS,
                 input: [
                   {

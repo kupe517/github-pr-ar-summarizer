@@ -9,6 +9,9 @@ const source = fs.readFileSync(
 );
 const context = {
   chrome: { runtime: { onMessage: { addListener() {} } } },
+  importScripts(file) {
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context);
+  },
 };
 
 vm.runInNewContext(source, context);

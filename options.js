@@ -1,6 +1,5 @@
 // options.js
 
-const DEFAULT_MODEL = "gpt-5.6-luna";
 const DEFAULT_MAX_TOKENS = "700";
 
 // Save the API key, model, and max_tokens when the user clicks "Save"
@@ -34,6 +33,6 @@ chrome.storage.sync.get(["openai_api_key", "github_token", "model", "max_tokens"
   if (data.github_token) {
     document.getElementById("githubToken").value = data.github_token;
   }
-  document.getElementById("model").value = data.model || DEFAULT_MODEL;
+  document.getElementById("model").value = resolveModel(data.model);
   document.getElementById("maxTokens").value = data.max_tokens || DEFAULT_MAX_TOKENS;
 });
